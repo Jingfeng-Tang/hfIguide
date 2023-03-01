@@ -32,6 +32,8 @@ def returnCAM(feature_conv, weight_softmax, class_idx):
     for idx in class_idx:
         # idx对应的那个概率最大的类，所以是1*512
         # softmax 1*512               512*49       1*49
+        print(f'feature_conv.shape:{feature_conv.shape}')
+        print(f'weight_softmax[idx].shape:{weight_softmax[idx].shape}')
         cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h * w)))  # feature conv 1*512*7*7  nc 512   h*w 49
         print(f'camshape{cam.shape}')
         cam = cam.reshape(h, w)
@@ -46,21 +48,33 @@ class Network(torch.nn.Module):
     def __init__(self, **kwargs):
         super(Network, self).__init__()
         self.net = models.resnet18(pretrained=True)
+        fc_in_features = self.net.fc.in_features
+        self.net.fc = torch.nn.Linear(fc_in_features, 20, bias=True)
         finalconv_name = 'layer4'
         self.net._modules.get(finalconv_name).register_forward_hook(hook_feature)
 
         # get the softmax weight
         params = list(self.net.parameters())
-        self.weight_softmax = np.squeeze(params[-2].data.numpy())
+        # print(params[-2])
+        self.weight_softmax = torch.squeeze(params[-2].data)
+        # print(self.weight_softmax.shape)
 
     def forward(self, inputs):
         N, C, H, W = inputs.size()
         x = self.net(inputs)
+        print(f'x.shape:{x.shape}')
+
         h_x = F.softmax(x, dim=1).data.squeeze()
+
+        print(f'h_x.shape:{h_x.shape}')
+
         probs, idx = h_x.sort(0, True)
-        probs = probs.numpy()
-        idx = idx.numpy()
+        print(f'probs:{probs} idx:{idx}')
+        # probs = probs.cpu()
+        # idx =
+        # probs = probs.numpy()
+        # idx = idx.numpy()
         # generate class activation mapping for the top1 prediction
         CAMs = returnCAM(features_blobs[0], self.weight_softmax, [idx[0]])
         cam = F.interpolate(CAMs, (H, W), mode='bilinear', align_corners=True)
-        return cam
+        return cam, x

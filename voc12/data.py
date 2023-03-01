@@ -153,11 +153,11 @@ class VOC12ClsDataset(VOC12ImageDataset):
         # self.label_list = load_image_label_list_from_xml(self.img_name_list, self.voc12_root)
 
     def __getitem__(self, idx):
-        name, img = super().__getitem__(idx)
+        name, img, img_hf = super().__getitem__(idx)
 
         label = torch.from_numpy(self.label_list[idx])
 
-        return name, img, label
+        return name, img, img_hf, label
 
 
 class VOC12ClsDatasetMSF(VOC12ClsDataset):

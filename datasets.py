@@ -106,7 +106,6 @@ class VOC12ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         name = self.img_name_list[idx]
-
         img = PIL.Image.open(get_img_path(name, self.voc12_root)).convert("RGB")
         if self.transform:
             img = self.transform(img)

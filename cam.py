@@ -18,7 +18,7 @@ from scipy import fftpack
 # input image
 LABELS_file = 'imagenet-simple-labels.json'
 image_file = '../datasets/VOC2012/JPEGImages/2007_000243.jpg'
-image_file = 'a.jpg'
+# image_file = 'a.jpg'
 
 # networks such as googlenet, resnet, densenet already use global average pooling at the end, so CAM could be used directly.
 model_id = 2
@@ -48,8 +48,9 @@ net._modules.get(finalconv_name).register_forward_hook(hook_feature)
 
 # get the softmax weight
 params = list(net.parameters())
+print(params[-2].data.shape)
 weight_softmax = np.squeeze(params[-2].data.numpy())
-
+print(weight_softmax.shape)
 def returnCAM(feature_conv, weight_softmax, class_idx):
     # generate the class activation maps upsample to 256x256
     size_upsample = (32, 32)
@@ -59,6 +60,8 @@ def returnCAM(feature_conv, weight_softmax, class_idx):
     for idx in class_idx:
         # idx对应的那个概率最大的类，所以是1*512
         # softmax 1*512               512*49       1*49
+        print(f'feature_conv.shape:{feature_conv.shape}')
+        print(f'weight_softmax[idx].shape:{weight_softmax[idx].shape}')
         cam = weight_softmax[idx].dot(feature_conv.reshape((nc, h*w)))  #feature conv 1*512*7*7  nc 512   h*w 49
         print(f'camshape{cam.shape}')
         cam = cam.reshape(h, w)

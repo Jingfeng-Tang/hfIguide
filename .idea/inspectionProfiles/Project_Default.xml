@@ -9,7 +9,7 @@
     <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredPackages">
         <value>
-          <list size="23">
+          <list size="24">
             <item index="0" class="java.lang.String" itemvalue="scikit-image" />
             <item index="1" class="java.lang.String" itemvalue="protobuf" />
             <item index="2" class="java.lang.String" itemvalue="scipy" />
@@ -33,6 +33,7 @@
             <item index="20" class="java.lang.String" itemvalue="olefile" />
             <item index="21" class="java.lang.String" itemvalue="pyparsing" />
             <item index="22" class="java.lang.String" itemvalue="Pillow" />
+            <item index="23" class="java.lang.String" itemvalue="pydensecrf" />
           </list>
         </value>
       </option>

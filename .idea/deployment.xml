@@ -6,21 +6,7 @@
       <paths name="tjf123@10.3.125.97:22 password">
         <serverdata>
           <mappings>
-            <mapping deploy="/data/425data/newdisk/tjf/cam" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="tjf123@10.3.125.97:22 password (1)">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="tjf123@10.3.125.97:22 password (2)">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/data/425data/newdisk/tjf/hfiguide" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

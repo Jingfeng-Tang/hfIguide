@@ -154,7 +154,6 @@ class VOC12ClsDataset(VOC12ImageDataset):
 
     def __getitem__(self, idx):
         name, img, img_hf = super().__getitem__(idx)
-
         label = torch.from_numpy(self.label_list[idx])
 
         return name, img, img_hf, label

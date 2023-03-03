@@ -72,19 +72,15 @@ if __name__ == '__main__':
     for ep in range(args.max_epoches):
 
         for iter, pack in enumerate(train_data_loader):
-            # print(args.device)
             img = pack[1]
-            print(device)
-            # img.cuda()
             N, C, H, W = img.size()
             img_mask = pack[2]
             img_mask = img_mask.cuda()
             label = pack[3]
             label = label.cuda()
-            cam, output = model(img.cuda())
+            cam, output = model(img.cuda(), label)
             # loss1 分类损失
             loss1 = loss1_function(output, label)
-
             # loss2 hfiguide loss
 
             loss = loss1

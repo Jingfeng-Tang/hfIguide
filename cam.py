@@ -48,7 +48,7 @@ net._modules.get(finalconv_name).register_forward_hook(hook_feature)
 
 # get the softmax weight
 params = list(net.parameters())
-print(params[-2].data.shape)
+# print(params[-2].data.shape)
 weight_softmax = np.squeeze(params[-2].data.numpy())
 print(weight_softmax.shape)
 def returnCAM(feature_conv, weight_softmax, class_idx):
@@ -92,8 +92,7 @@ print(f'logit:{logit.shape}')
 # load the imagenet category list
 with open(LABELS_file) as f:
     classes = json.load(f)
-# print(classes)
-# print(list(classes.keys())[list(classes.values()).index(2)])
+
 
 h_x = F.softmax(logit, dim=1).data.squeeze()
 print(f'h_x:{h_x.shape}')
@@ -101,7 +100,7 @@ probs, idx = h_x.sort(0, True)
 probs = probs.numpy()
 # print(f'probs:{probs.shape}')
 idx = idx.numpy()
-# print(f'idx:{idx}')
+# print(f'probs:{probs} idx:{idx}')
 # output the prediction
 for i in range(0, 5):
     # print(f'idx[{i}], class {idx[i]}')

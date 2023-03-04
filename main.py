@@ -79,6 +79,7 @@ if __name__ == '__main__':
             label = pack[3]
             label = label.cuda()
             cam, output = model(img.cuda(), label)
+            print('-----------------------一次前向完成-----------------')
             # loss1 分类损失
             loss1 = loss1_function(output, label)
             # loss2 hfiguide loss

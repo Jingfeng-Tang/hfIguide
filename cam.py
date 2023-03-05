@@ -17,7 +17,7 @@ from scipy import fftpack
 
 # input image
 LABELS_file = 'imagenet-simple-labels.json'
-image_file = '../datasets/VOC2012/JPEGImages/2007_000243.jpg'
+image_file = '../datasets/VOC2012/JPEGImages/2008_001034.jpg'
 # image_file = 'a.jpg'
 
 # networks such as googlenet, resnet, densenet already use global average pooling at the end, so CAM could be used directly.

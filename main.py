@@ -6,13 +6,32 @@ import os
 from torch.utils.data import DataLoader
 from torchvision import transforms
 import voc12.data
-from tool import pyutils, imutils, torchutils, visualization
+from tool import pyutils, imutils, torchutils, visualization, myutils
 import argparse
 import importlib
 # from tensorboardX import SummaryWriter
 import torch.nn.functional as F
 # loss = F.multilabel_soft_margin_loss(outputs, targets)
 from model import Network
+import PIL.Image
+
+
+
+
+def loss2_camNeighbourhood(cam, hf_mask):
+    """
+    loss2 CAM领域损失 计算CAM中像素是否在高频图的边缘内部
+    （1）无     如果cam内部像素，且在边缘内；
+    （2）惩罚1   如果cam边缘像素，且在边缘内；
+    （3）惩罚2   如果cam内部像素，且在边缘外；
+    （4）惩罚3   如果cam边缘像素，且在边缘外；
+    :param cam:CAM图像
+    :param hf_mask:高频图像mask
+    """
+
+
+
+
 
 if __name__ == '__main__':
 
@@ -43,7 +62,7 @@ if __name__ == '__main__':
 
     train_dataset = voc12.data.VOC12ClsDataset(args.train_list, voc12_root=args.voc12_root,
                                                transform=transforms.Compose([
-                                                   transforms.RandomHorizontalFlip(),
+                                                   # transforms.RandomHorizontalFlip(),
                                                    transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3,
                                                                           hue=0.1),
                                                    transforms.Resize((224, 224))
@@ -72,23 +91,48 @@ if __name__ == '__main__':
     for ep in range(args.max_epoches):
 
         for iter, pack in enumerate(train_data_loader):
-            if iter > 0:
+            if iter > 0:        # 测试用，只训练一个迭代
                 break
             print(pack[0])
-            img = pack[1]
+            img = pack[1]       # 图像
             N, C, H, W = img.size()
-            img_mask = pack[2]
+            img_mask = pack[2]  # mask
             img_mask = img_mask.cuda()
+            # # generate high frequency Image for test
+            # img_mask_i = img_mask[0][0]
+            # # print(f'img_mask_i.shape:{img_mask_i.shape} type(img_mask_i):{type(img_mask_i)}')
+            # img_hf = myutils.tensorToPILImage(img_mask_i)  # numpy.darray 转换成 PIL.Image
+            # str_imghf = "./hfImg/" + pack[0][0] + '.jpg'
+            # img_hf.save(str_imghf)
+
+            # generate high frequency 3 dimension Image for test
+            img_mask_i = img_mask[0]
+            # print(f'img_mask_i.shape:{img_mask_i.shape} type(img_mask_i):{type(img_mask_i)}')
+            img_hf = myutils.tensorToPILImage(img_mask_i)  # numpy.darray 转换成 PIL.Image
+            str_imghf = "./hfImg/" + pack[0][0] + '.jpg'
+            img_hf.save(str_imghf)
+
             label = pack[3]
             label = label.cuda()
             cam, output = model(img.cuda(), label, pack[0])
-            # print(type(cam))
-            # print(cam[0][0])
-            # print('-----------------------一次前向完成-----------------')
+            # print(cam[0][0].shape)
+
+            # # 计算mask与cam的哈达玛乘积
+            # img_mask_i = img_mask_i.cuda()
+            # cam_syn = cam[0][0]
+            # cam_syn = cam_syn.cuda()
+            # img_syn_tensor = torch.einsum("ij, ij -> ij", cam_syn, img_mask_i)
+            # img_syn = myutils.tensorToPILImage(img_syn_tensor)  # numpy.darray 转换成 PIL.Image
+            # str_img_syn = "./hfImg/" + pack[0][0] + 'syn' + '.jpg'
+            # img_syn.save(str_img_syn)
+
             # loss1 分类损失
             loss1 = F.multilabel_soft_margin_loss(output, label)
-            # print(f'loss1 OK-----------------------------------------')
-            # loss2 hfiguide loss
+            # loss2 CAM领域损失 计算CAM中像素是否在高频图的边缘内部
+            # （1）无     如果cam内部像素，且在边缘内；
+            # （2）惩罚1   如果cam边缘像素，且在边缘内；
+            # （3）惩罚2   如果cam内部像素，且在边缘外；
+            # （4）惩罚3   如果cam边缘像素，且在边缘外；
 
             loss = loss1
             optimizer.zero_grad()

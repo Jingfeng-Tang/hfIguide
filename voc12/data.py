@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 import PIL.Image
 import os.path
 import scipy.misc
-from tool import imutils
+from tool import imutils, myutils
 from torchvision import transforms
 
 import io
@@ -73,7 +73,7 @@ def load_img_name_list(dataset_path):
     return img_name_list
 
 
-def fft(img):
+def fft(img, name):
     im = np.array(img)
     freq = fp.fft2(im)
     (w, h) = freq.shape
@@ -91,6 +91,10 @@ def fft(img):
 
     mask_all[mask_all >= 255] = 1  # 生成掩模，边缘高频部分为1，其余为0
     mask_all = torch.from_numpy(mask_all)   # tensor类型
+
+    # img_hf = myutils.tensorToPILImage(mask_all)  # numpy.darray 转换成 PIL.Image
+    # str_imghf = "./hfImg/" + name + '.jpg'
+    # img_hf.save(str_imghf)
 
     return mask_all     # numpy.ndarray类型
 
@@ -112,7 +116,6 @@ class VOC12ImageDataset(Dataset):
 
         if self.transform:
             img = self.transform(img)  # 原图随机水平翻转，颜色抖动，resize
-        # print(type(img))
 
         image_transforms_gray = transforms.Compose([
                      transforms.Grayscale(1)
@@ -123,7 +126,7 @@ class VOC12ImageDataset(Dataset):
         # 获取图像高频部分
         # img_gray = PIL.Image.open(get_img_path(name, self.voc12_root)).convert('L')
         # 通过FFT获取到高频图像，作为mask，
-        mask = fft(img_gray)    # tensor类型
+        mask = fft(img_gray, name)    # tensor类型
         # 去除mask部分，保留高频部分
         # img转tensor
         transf = transforms.ToTensor()

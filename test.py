@@ -121,6 +121,13 @@
 #     plt.axis('off')
 #     plt.show()
 
+
+
+
+
+
+
+
 import io
 from PIL import Image
 from torchvision import models, transforms
@@ -137,16 +144,11 @@ import scipy.fft as fp
 from scipy import fftpack
 
 # input image
-image_file = '2007_000243.jpg'
+image_file = '../datasets/VOC2012/JPEGImages/'+'2010_002734'+'.jpg'
 
 def fft():
-    # img_path = 'I:\deeplearning\data\daisy.jpg'
-    # img = Image.open(img_path)
-    # print(type(Image.open(image_file).convert('L')))
     im = np.array(Image.open(image_file).convert('L'))  #
     im_rgb = np.array(Image.open(image_file).convert('RGB'))
-    # plt.imshow(im_rgb)
-    # plt.show()
     freq = fp.fft2(im)
     (w, h) = freq.shape
     half_w, half_h = int(w / 2), int(h / 2)  # 确定频谱图像的中心位置
@@ -155,25 +157,24 @@ def fft():
     freq2 = fftpack.fftshift(freq1)  # 将低频部分移至中心位置
     freq2[half_w - 20:half_w + 21, half_h - 20:half_h + 21] = 0  # select all but the first 20x20 (low) frequencies
     im1 = np.clip(fp.ifft2(fftpack.ifftshift(freq2)).real, 0, 255)  # 将两端的像素值缩至端点
-    # print(im1)
-    #plt.imshow(im, cmap='gray')
-    # plt.axis('off')
-    #plt.imshow((5 * np.log10(0.1 + freq2)).astype(int), cmap='gray')
-    # plt.imshow(im1, cmap='gray')
-    # plt.show()
-
-
     # 二值化
     ret, mask_all = cv2.threshold(src=im1,  # 要二值化的图片
                                   thresh=20,  # 全局阈值
                                   maxval=255,  # 大于全局阈值后设定的值
                                   type=cv2.THRESH_BINARY)
+    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    # eroded = cv2.erode(mask_all, kernel)  # 腐蚀图像
+    # dilated = cv2.dilate(mask_all, kernel)  # 膨胀图像
+    #
+    # plt.imshow(mask_all, cmap='gray')
+    # plt.show()
+    #
+    # plt.imshow(eroded, cmap='gray')
+    # plt.show()
+    #
+    # plt.imshow(dilated, cmap='gray')
+    # plt.show()
 
-    plt.imshow(mask_all, cmap='gray')
-    plt.show()
-
-    print(f'im_rgb.shape:{im_rgb.shape}')
-    # print(f'im_rgb:{im_rgb}')
     # 将im 按照维度切分
     numpydata=np.transpose(im_rgb, (2, 0, 1))
     print(f'ccim_rgb.shape:{im_rgb.shape}')
@@ -201,13 +202,41 @@ def fft():
     finimg = np.transpose(fin, (1, 2, 0))
     print(finimg.dtype)
     img1 = Image.fromarray(finimg, 'RGB')
-    #img1.show()
     img1.save('a.jpg')
 
-    # print(finimg.shape)
-    # print(finimg)
-    # plt.imshow(finimg, cmap="")
-    plt.imshow(cv2.cvtColor(finimg))
-    plt.show()
+    return mask_all
 
-fft()
+def edgeDetection(imgfile):
+    image = cv2.imread(imgfile, cv2.IMREAD_GRAYSCALE)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    dilate_img = cv2.dilate(image, kernel)
+    erode_img = cv2.erode(image, kernel)
+
+    absdiff_img = cv2.absdiff(dilate_img, erode_img)
+    retval, threshold_img = cv2.threshold(absdiff_img, 40, 255, cv2.THRESH_BINARY)
+    result = cv2.bitwise_not(threshold_img)
+    # # cv2.imshow('../datasets/VOC2012/JPEGImages/'+'2007_000068'+'.jpg', image)
+    # plt.imshow(dilate_img)
+    # plt.show()
+    # plt.imshow(erode_img)
+    # plt.show()
+    # plt.imshow(absdiff_img)
+    # plt.show()
+    # plt.imshow(threshold_img)
+    # plt.show()
+
+    # plt.imshow(result)
+    # plt.show()
+
+    return result
+
+
+fftimg = fft()
+edge_img = edgeDetection(image_file)
+
+plt.subplot(121), plt.title("fft_img"), plt.axis('off')
+plt.imshow(fftimg)
+plt.subplot(122), plt.title("edge_img"), plt.axis('off')
+plt.imshow(edge_img)
+plt.show()

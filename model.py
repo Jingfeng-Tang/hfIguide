@@ -20,7 +20,7 @@ from scipy import fftpack
 import torch
 from PIL import Image
 import matplotlib.pyplot as plt
-
+from tool import myutils
 
 # hook the feature extractor
 features_blobs = []
@@ -90,28 +90,23 @@ def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
             # print(f'cam_img.shape {cam_img.shape}')
             cam_tensorsize = F.interpolate(cam_img, size=(H, W), mode='bilinear', align_corners=True)
             cam_tensorsize = cam_tensorsize.squeeze()
-            # print(f'cam{cam.shape}')
 
-            # cam_te_u8 = torch.tensor(cam, dtype=torch.uint8)
-            # cam_nd = cam_te_u8.numpy()
+            cam_te_u8 = torch.tensor(cam_tensorsize, dtype=torch.uint8)
+            cam_nd = cam_te_u8.numpy()
 
-            # imageq = transImg(cam)
-            # imageq.save('./camImg/test.jpg')
-
-
-            # # 生成热力图 看效果
-            # strimg = '../datasets/VOC2012/JPEGImages/'+str(name[i])+'.jpg'
-            # img = cv2.imread(strimg)
-            # height, width, _ = img.shape
-            # heatmap = cv2.applyColorMap(cv2.resize(cam_nd, (width, height)), cv2.COLORMAP_JET)
-            # result = heatmap * 0.3 + img * 0.5
-            # cv2.imwrite('./camImg/'+str(name[i])+'+'+str(j)+'_CAM.jpg', result)
+            # 生成热力图 看效果
+            strimg = '../datasets/VOC2012/JPEGImages/'+str(name[i])+'.jpg'
+            img = cv2.imread(strimg)
+            height, width, _ = img.shape
+            heatmap = cv2.applyColorMap(cv2.resize(cam_nd, (width, height)), cv2.COLORMAP_JET)
+            result = heatmap * 0.3 + img * 0.5
+            cv2.imwrite('./camImg/'+str(name[i])+'+'+str(j)+'_CAM.jpg', result)
 
 
 
             output_cam_i.append(cam_tensorsize)
-            print(type(cam_tensorsize))
-            print(cam_tensorsize.shape)
+            # print(type(cam_tensorsize))
+            # print(cam_tensorsize.shape)
             # print(f'存入当前第{i}个图像的第{j}个CAM图:')
         output_cam.append(output_cam_i)
         # print(f'存入当前第{i}个图像的所有CAM图--------------------------:')

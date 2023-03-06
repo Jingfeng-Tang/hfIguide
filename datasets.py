@@ -88,6 +88,7 @@ def fft(img):
                                   thresh=20,  # 全局阈值
                                   maxval=255,  # 大于全局阈值后设定的值
                                   type=cv2.THRESH_BINARY)
+
     return mask_all  # ndarray
 
 
@@ -100,7 +101,7 @@ class VOC12ImageDataset(Dataset):
         self.img_name_list = load_img_name_list(img_name_list_path)
         self.voc12_root = voc12_root
         self.transform = transform
-
+        print('init')
     def __len__(self):
         return len(self.img_name_list)
 
@@ -111,6 +112,7 @@ class VOC12ImageDataset(Dataset):
             img = self.transform(img)
         img_gray = img.convert("L")
         img_mask = fft(img_gray)
+
         img_mask = transformst(img_mask)  # tensor
 
         return name, img, img_mask
@@ -125,7 +127,6 @@ class VOC12ClsDataset(VOC12ImageDataset):
 
     def __getitem__(self, idx):
         name, img, img_mask = super().__getitem__(idx)
-
         label = torch.from_numpy(self.label_list[idx])
 
         return name, img, img_mask, label

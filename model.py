@@ -12,7 +12,6 @@ import numpy
 import cv2
 import json
 
-
 import matplotlib.pyplot as plt
 import scipy.fft as fp
 from scipy import fftpack
@@ -25,8 +24,12 @@ from tool import myutils
 # hook the feature extractor
 features_blobs = []
 
+
 def hook_feature(module, input, output):
-    features_blobs.append(output.data.cpu().numpy())
+    pass
+    # features_blobs.append(output.data.cpu().numpy())
+    # print(len(features_blobs))
+
 
 def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
     # print(f'feature_conv_i.shape{cls_num}')
@@ -42,15 +45,15 @@ def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
     # print(f'weight_softmax.shape{weight_softmax.shape}')    # 20*512
     output_cam = []
     # 每张图
-    for i in range(8):      # 8是batchsize
+    for i in range(8):  # 8是batchsize
         output_cam_i = []
         for j in range(int(cls_num[i])):
             # print(f'idx:{idx}')
             # cls_num是图像中所含有的类别总数  idx是按照概率由高到低的tensor
             # softmax 1*512               512*49       1*49
-            feature_conv_i = feature_conv[i]        # 512*7*7
+            feature_conv_i = feature_conv[i]  # 512*7*7
             # print(f'feature_conv_i.shape{feature_conv_i.shape}')
-            feature_conv_i = torch.from_numpy(feature_conv_i.reshape((nc, h * w)))      #特征图    512*49
+            feature_conv_i = torch.from_numpy(feature_conv_i.reshape((nc, h * w)))  # 特征图    512*49
             # print(f'feature_conv_i.shape{feature_conv_i.shape}')
             # print(f'weight_softmax.shape{weight_softmax.shape}')    # 20*512
             # print(f'class_idx{class_idx}')    # 20*512
@@ -58,9 +61,9 @@ def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
             # print(f'j.item(){type(int(j.item()))}')
             # print(f'class_idx{class_idx[i][j.item()]}')    # 20*512
             # print(f'weight_softmax[class_idx[i][int(j.item())]].shape{weight_softmax[class_idx[i][int(j.item())]].shape}')    # 20*512
-            cam = torch.matmul(weight_softmax[class_idx[i][j]], feature_conv_i) # 49
+            cam = torch.matmul(weight_softmax[class_idx[i][j]], feature_conv_i)  # 49
 
-            cam = cam.reshape(h, w)     # 7*7
+            cam = cam.reshape(h, w)  # 7*7
             # print(f'type(cam){type(cam)}')
             # image11 = transImg(cam)
             # image11.save('./camImg/test11.jpg')
@@ -91,18 +94,16 @@ def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
             cam_tensorsize = F.interpolate(cam_img, size=(H, W), mode='bilinear', align_corners=True)
             cam_tensorsize = cam_tensorsize.squeeze()
 
-            cam_te_u8 = torch.tensor(cam_tensorsize, dtype=torch.uint8)
-            cam_nd = cam_te_u8.numpy()
+            # cam_te_u8 = torch.tensor(cam_tensorsize, dtype=torch.uint8)
+            # cam_nd = cam_te_u8.numpy()
 
-            # 生成热力图 看效果
-            strimg = '../datasets/VOC2012/JPEGImages/'+str(name[i])+'.jpg'
-            img = cv2.imread(strimg)
-            height, width, _ = img.shape
-            heatmap = cv2.applyColorMap(cv2.resize(cam_nd, (width, height)), cv2.COLORMAP_JET)
-            result = heatmap * 0.3 + img * 0.5
-            cv2.imwrite('./camImg/'+str(name[i])+'+'+str(j)+'_CAM.jpg', result)
-
-
+            # # 生成热力图 看效果
+            # strimg = '../datasets/VOC2012/JPEGImages/' + str(name[i]) + '.jpg'
+            # img = cv2.imread(strimg)
+            # height, width, _ = img.shape
+            # heatmap = cv2.applyColorMap(cv2.resize(cam_nd, (width, height)), cv2.COLORMAP_JET)
+            # result = heatmap * 0.3 + img * 0.5
+            # cv2.imwrite('./camImg/' + str(name[i]) + '+' + str(j) + '_CAM.jpg', result)
 
             output_cam_i.append(cam_tensorsize)
             # print(type(cam_tensorsize))
@@ -112,10 +113,47 @@ def returnCAM(feature_conv, weight_softmax, class_idx, cls_num, H, W, name):
         # print(f'存入当前第{i}个图像的所有CAM图--------------------------:')
     return output_cam
 
+
+# class Network(torch.nn.Module):
+#     def __init__(self, **kwargs):
+#         super(Network, self).__init__()
+#         self.net = models.resnet18(pretrained=True)
+#         fc_in_features = self.net.fc.in_features
+#         self.net.fc = torch.nn.Linear(fc_in_features, 20, bias=True)
+#         finalconv_name = 'layer4'
+#         self.net._modules.get(finalconv_name).register_forward_hook(hook_feature)
+#
+#         # get the softmax weight
+#         params = list(self.net.parameters())
+#         self.weight_softmax = torch.squeeze(params[-2].data)
+#
+#     def forward(self, inputs, label, name):
+#         # 前向过程，也要label，确定生成几个CAM图
+#         # print(f'label={label}')
+#         cls_num = torch.sum(label, dim=1, keepdim=False)
+#         # print(f'a1={a1}')
+#
+#         N, C, H, W = inputs.size()
+#         x = self.net(inputs)
+#         # print(f'x.shape:{x.shape}')
+#
+#         h_x = F.softmax(x, dim=1).data.squeeze()
+#
+#         # print(f'h_x.shape:{h_x.shape}')
+#
+#         probs, idx = h_x.sort(1, True)
+#         # print(f'idx:{idx}')
+#         # idx = idx.numpy()
+#         # generate class activation mapping for the top1 prediction
+#         CAMs = returnCAM(features_blobs[0], self.weight_softmax, idx, cls_num, H, W, name)
+#         # CAMs为一个列表，表中每一个元素（也是列表）为每张图的所有CAM图
+#         return CAMs, x
+
+#  new
 class Network(torch.nn.Module):
     def __init__(self, **kwargs):
         super(Network, self).__init__()
-        self.net = models.resnet18(pretrained=True)
+        self.net = models.resnet50(pretrained=True)
         fc_in_features = self.net.fc.in_features
         self.net.fc = torch.nn.Linear(fc_in_features, 20, bias=True)
         finalconv_name = 'layer4'
@@ -123,28 +161,21 @@ class Network(torch.nn.Module):
 
         # get the softmax weight
         params = list(self.net.parameters())
-        # print(params[-2])
         self.weight_softmax = torch.squeeze(params[-2].data)
-        # print(self.weight_softmax.shape)
 
-    def forward(self, inputs, label, name):
+    def forward(self, inputs, label):
         # 前向过程，也要label，确定生成几个CAM图
-        # print(f'label={label}')
         cls_num = torch.sum(label, dim=1, keepdim=False)
-        # print(f'a1={a1}')
-
         N, C, H, W = inputs.size()
         x = self.net(inputs)
         # print(f'x.shape:{x.shape}')
-
         h_x = F.softmax(x, dim=1).data.squeeze()
-
         # print(f'h_x.shape:{h_x.shape}')
-
         probs, idx = h_x.sort(1, True)
         # print(f'idx:{idx}')
         # idx = idx.numpy()
         # generate class activation mapping for the top1 prediction
-        CAMs = returnCAM(features_blobs[0], self.weight_softmax, idx, cls_num, H, W, name)
-        #CAMs为一个列表，表中每一个元素（也是列表）为每张图的所有CAM图
-        return CAMs, x
+        # CAMs = returnCAM(features_blobs[0], self.weight_softmax, idx, cls_num, H, W, name)
+        # CAMs为一个列表，表中每一个元素（也是列表）为每张图的所有CAM图
+        return x
+

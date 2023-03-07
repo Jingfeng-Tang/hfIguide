@@ -15,8 +15,8 @@ import torch.nn.functional as F
 from model import Network
 import PIL.Image
 
-
-
+import time
+import datetime
 
 def loss2_camNeighbourhood(cam, hf_mask):
     """
@@ -28,6 +28,8 @@ def loss2_camNeighbourhood(cam, hf_mask):
     :param cam:CAM图像
     :param hf_mask:高频图像mask
     """
+    # cam
+
 
 
 
@@ -37,14 +39,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", default=8, type=int)
-    parser.add_argument("--max_epoches", default=1, type=int)
+    parser.add_argument("--max_epoches", default=100, type=int)
     parser.add_argument("--network", default="resnet18", type=str)
     parser.add_argument("--lr", default=0.01, type=float)
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--wt_dec", default=5e-4, type=float)
     parser.add_argument("--train_list", default="voc12/train_aug.txt", type=str)
     parser.add_argument("--val_list", default="voc12/val.txt", type=str)
-    parser.add_argument("--session_name", default="resnet18_hfig", type=str)
+    parser.add_argument("--session_name", default="resnet50_hfig", type=str)
     parser.add_argument("--crop_size", default=448, type=int)
     parser.add_argument("--weights", required=False, type=str)
     parser.add_argument("--voc12_root", default='../datasets/VOC2012', type=str)
@@ -53,7 +55,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available()  else "cpu")
-    # print(device)
+    print(device)
     # print(vars(args))
 
     model = Network()
@@ -77,7 +79,7 @@ if __name__ == '__main__':
 
     max_step = len(train_dataset) // args.batch_size * args.max_epoches
 
-    model = model.to(device)
+    model = model.cuda()
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params=params, lr=args.lr, weight_decay=args.wt_dec, momentum=0.9, nesterov=False)
 
@@ -87,17 +89,24 @@ if __name__ == '__main__':
     # print(torch.cuda.device_count())
     avg_meter = pyutils.AverageMeter('loss', 'loss_cls', 'loss_er', 'loss_ecr')
 
+    print(next(model.parameters()).device)
     timer = pyutils.Timer("Session started: ")
+    t0 = time.time()
     for ep in range(args.max_epoches):
 
+        running_loss = 0.0
         for iter, pack in enumerate(train_data_loader):
-            if iter > 0:        # 测试用，只训练一个迭代
-                break
-            print(pack[0])
-            img = pack[1]       # 图像
-            N, C, H, W = img.size()
-            img_mask = pack[2]  # mask
-            img_mask = img_mask.cuda()
+            # if iter > 0:        # 测试用，只训练一个迭代
+            #     break
+            # print(pack[0])
+
+            # pack = [item.cuda(non_blocking=True) for item in pack]
+
+            img = pack[1].cuda()       # 图像
+            # img = img.cuda()
+            # N, C, H, W = img.size()
+            # img_mask = pack[2]  # mask
+            # img_mask = img_mask.cuda()
             # # generate high frequency Image for test
             # img_mask_i = img_mask[0][0]
             # # print(f'img_mask_i.shape:{img_mask_i.shape} type(img_mask_i):{type(img_mask_i)}')
@@ -105,18 +114,23 @@ if __name__ == '__main__':
             # str_imghf = "./hfImg/" + pack[0][0] + '.jpg'
             # img_hf.save(str_imghf)
 
-            # generate high frequency 3 dimension Image for test
-            img_mask_i = img_mask[0]
-            # print(f'img_mask_i.shape:{img_mask_i.shape} type(img_mask_i):{type(img_mask_i)}')
-            img_hf = myutils.tensorToPILImage(img_mask_i)  # numpy.darray 转换成 PIL.Image
-            str_imghf = "./hfImg/" + pack[0][0] + '.jpg'
-            img_hf.save(str_imghf)
+            # # generate high frequency 3 dimension Image for test
+            # img_mask_i = img_mask[0]
+            # # print(f'img_mask_i.shape:{img_mask_i.shape} type(img_mask_i):{type(img_mask_i)}')
+            # img_hf = myutils.tensorToPILImage(img_mask_i)  # numpy.darray 转换成 PIL.Image
+            # str_imghf = "./hfImg/" + pack[0][0] + '.jpg'
+            # img_hf.save(str_imghf)
 
-            label = pack[3]
-            label = label.cuda()
-            cam, output = model(img.cuda(), label, pack[0])
+            label = pack[3].cuda()
+            # label = label.cuda()
+            # cam, output = model(img.cuda(), label, pack[0])
+
+            # name = pack[0]
+            # name = name.cuda()
+            optimizer.zero_grad()
+            output = model(img, label)
             # print(cam[0][0].shape)
-
+            # print(str(output.is_cuda()))
             # # 计算mask与cam的哈达玛乘积
             # img_mask_i = img_mask_i.cuda()
             # cam_syn = cam[0][0]
@@ -127,18 +141,23 @@ if __name__ == '__main__':
             # img_syn.save(str_img_syn)
 
             # loss1 分类损失
-            loss1 = F.multilabel_soft_margin_loss(output, label)
+            loss = F.multilabel_soft_margin_loss(output, label)
             # loss2 CAM领域损失 计算CAM中像素是否在高频图的边缘内部
             # （1）无     如果cam内部像素，且在边缘内；
             # （2）惩罚1   如果cam边缘像素，且在边缘内；
             # （3）惩罚2   如果cam内部像素，且在边缘外；
             # （4）惩罚3   如果cam边缘像素，且在边缘外；
+            running_loss += loss.item()
 
-            loss = loss1
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        print(f'current epoch:{ep}, loss:{loss}')
+        print(f'current epoch:{ep+1}, current loss:{running_loss}')
 
     torch.save(model.state_dict(), args.session_name + '.pth')
+    t1 = time.time()
+    time_all = t1-t0
+    elapsed_rounded = int(round((time)))
+    # 格式化为 hh:mm:ss
+    time_all1 = str(datetime.timedelta(seconds=elapsed_rounded))
+    print(time_all1)
     print("end")

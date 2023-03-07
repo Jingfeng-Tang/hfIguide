@@ -1,7 +1,3 @@
-# simple implementation of CAM in PyTorch for the networks such as ResNet, DenseNet, SqueezeNet, Inception
-# last update by BZ, June 30, 2021
-
-import io
 from PIL import Image
 from torchvision import models, transforms
 from torch.autograd import Variable
@@ -9,48 +5,29 @@ from torch.nn import functional as F
 import numpy as np
 import cv2
 import json
+import torch.nn as nn
 
-
-import matplotlib.pyplot as plt
-import scipy.fft as fp
-from scipy import fftpack
-
-# input image
 LABELS_file = 'imagenet-simple-labels.json'
-image_file = '../datasets/VOC2012/JPEGImages/2009_003679.jpg'
-# image_file = 'dog.jpg'
+image_file = '../datasets/VOC2012/JPEGImages/2007_004481.jpg'
 
-# networks such as googlenet, resnet, densenet already use global average pooling at the end, so CAM could be used directly.
-model_id = 2
-if model_id == 1:
-    net = models.squeezenet1_1(pretrained=True)
-    finalconv_name = 'features' # this is the last conv layer of the network
-elif model_id == 2:
-    net = models.resnet18(pretrained=True)
-    finalconv_name = 'layer4'
-elif model_id == 3:
-    net = models.densenet161(pretrained=True)
-    finalconv_name = 'features'
-
-net.eval()
-
-# hook the feature extractor
 features_blobs = []
 def hook_feature(module, input, output):
     features_blobs.append(output.data.cpu().numpy())
 
-# print(net)
-# print(net._modules.get('backbone'))
 
+net = models.resnet50(pretrained=True)
+fc_in_features = net.fc.in_features
+net.fc = nn.Linear(fc_in_features, 20, bias=True)
+finalconv_name = 'layer4'
+net.modules.get(finalconv_name).register_forward_hook(hook_feature)
 
-net._modules.get(finalconv_name).register_forward_hook(hook_feature)
-
+net.eval()
 
 # get the softmax weight
 params = list(net.parameters())
 # print(params[-2].data.shape)
 weight_softmax = np.squeeze(params[-2].data.numpy())
-print(weight_softmax.shape)
+
 def returnCAM(feature_conv, weight_softmax, class_idx):
     # generate the class activation maps upsample to 256x256
     size_upsample = (32, 32)
@@ -88,44 +65,23 @@ img_pil = Image.open(image_file)
 img_tensor = preprocess(img_pil)
 img_variable = Variable(img_tensor.unsqueeze(0))
 logit = net(img_variable)
-print(f'logit:{logit.shape}')
+
 # load the imagenet category list
 with open(LABELS_file) as f:
     classes = json.load(f)
-
 
 h_x = F.softmax(logit, dim=1).data.squeeze()
 print(f'h_x:{h_x.shape}')
 probs, idx = h_x.sort(0, True)
 probs = probs.numpy()
-# print(f'probs:{probs.shape}')
 idx = idx.numpy()
-# print(f'probs:{probs} idx:{idx}')
 # output the prediction
 for i in range(0, 5):
-    # print(f'idx[{i}], class {idx[i]}')
     print('{:.3f} -> {}'.format(probs[i], classes[idx[i]]))
-
-# generate class activation mapping for the top1 prediction
-
-# 最后一层（layer4）输出的特征图 1*512*7*7
-# print(f'type(features_blobs[0])={features_blobs[0].shape}')
-# print(f'features_blobs[0]={features_blobs[0]}')
-
-# 最后一层（layer4）输出的weight_softmax 1000*512       1000个类 对应的512通道
-# print(f'type(weight_softmax)={weight_softmax.shape}')
-# print(f'weight_softmax[0]={weight_softmax}')
-
-
 
 CAMs = returnCAM(features_blobs[0], weight_softmax, [idx[0]])
 
-print(f'cams999: {CAMs[0].shape}')
-
-
-
 # render the CAM and output
-# print('output CAM.jpg for the top1 prediction: %s' % classes[idx[0]])
 img = cv2.imread(image_file)
 height, width, _ = img.shape
 heatmap = cv2.applyColorMap(cv2.resize(CAMs[0],(width, height)), cv2.COLORMAP_JET)
